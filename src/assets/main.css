@@ -1,1 +1,107 @@
 @import "tailwindcss";
+
+@theme {
+  --color-lb-bg: #14181c;
+  --color-lb-panel: #2c3440;
+  --color-lb-line: #405060;
+  --color-lb-text: #99aabb;
+  --color-lb-muted: #667788;
+  --color-lb-green: #00e054;
+  --color-lb-orange: #ff8000;
+  --color-lb-blue: #40bcf4;
+  --font-sans: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+}
+
+html {
+  background: var(--color-lb-bg);
+}
+
+body {
+  margin: 0;
+  background: var(--color-lb-bg);
+  color: var(--color-lb-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-lb-green);
+  color: #14181c;
+}
+
+.lb-input {
+  width: 100%;
+  background: #2c3440;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 0.5rem 0.65rem;
+  font-size: 1rem;
+  outline: none;
+}
+.lb-input:focus {
+  background: #3b4755;
+  color: #fff;
+  border-color: var(--color-lb-green);
+}
+
+.lb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 3px;
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.lb-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.lb-btn-green {
+  background: var(--color-lb-green);
+  color: #fff;
+}
+.lb-btn-green:hover:not(:disabled) {
+  background: #2cf070;
+}
+.lb-btn-grey {
+  background: #556677;
+  color: #fff;
+}
+.lb-btn-grey:hover:not(:disabled) {
+  background: #667788;
+}
+.lb-btn-danger {
+  background: transparent;
+  color: #99aabb;
+}
+.lb-btn-danger:hover:not(:disabled) {
+  color: #ff4d4d;
+}
+
+.lb-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-lb-muted);
+}
+
+/* Mobile first : cibles tactiles confortables, réduites à partir de sm */
+@media (min-width: 40rem) {
+  .lb-btn {
+    min-height: 0;
+  }
+  .lb-input {
+    font-size: 0.95rem;
+  }
+}
