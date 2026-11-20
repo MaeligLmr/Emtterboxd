@@ -4,7 +4,8 @@ import type { Film } from '@/types/db/Film'
 import { formatMonth } from '@/lib/date'
 import DiaryEntry from '@/components/DiaryEntry.vue'
 
-const props = defineProps<{ films: Film[] }>()
+// readonly: public diary of someone else (no "add" call to action)
+const props = defineProps<{ films: Film[]; readonly?: boolean }>()
 const emit = defineEmits<{ open: [film: Film]; add: [] }>()
 
 // Diary: newest first, grouped by month of the watch date
@@ -34,7 +35,9 @@ function handleAdd() {
   <section class="-mx-4 sm:mx-0">
     <div v-if="!films.length" class="px-4 py-20 text-center text-lb-muted">
       <p class="mb-4">No films yet.</p>
-      <button type="button" class="lb-btn lb-btn-green" @click="handleAdd">Add a film</button>
+      <button v-if="!readonly" type="button" class="lb-btn lb-btn-green" @click="handleAdd">
+        Add a film
+      </button>
     </div>
 
     <div v-for="month in months" :key="month.key">

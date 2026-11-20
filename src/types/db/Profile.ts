@@ -4,4 +4,5 @@ export interface Profile {
   first_name: string | null
   last_name: string | null
   username: string | null
+  is_public: boolean
 }

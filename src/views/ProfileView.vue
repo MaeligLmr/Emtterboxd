@@ -4,12 +4,14 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faChevronRight } from '@fortawesome/free-solid-svg-icons'
 import { useSignedUrl } from '@/composables/useSignedUrl'
 import { IMAGE_INPUT_TYPES } from '@/lib/image/to-webp'
+import { isUsernameValid, USERNAME_HINT } from '@/lib/validation/username'
 import type { Film } from '@/types/db/Film'
 import { MAX_FAVORITES } from '@/constants'
 import { profileHandler } from '@/handlers/profileHandler'
 import FilmCard from '@/components/FilmCard.vue'
 import FavoritePicker from '@/components/FavoritePicker.vue'
 import ImageCropper from '@/components/ImageCropper.vue'
+import KebabMenu from '@/components/KebabMenu.vue'
 
 const props = defineProps<{
   name: string
@@ -19,6 +21,9 @@ const props = defineProps<{
   candidates: Film[]
   recent: Film[]
   total: number
+  isPublic: boolean
+  /** A username is required to publish a profile */
+  canBePublic: boolean
 }>()
 const emit = defineEmits<{
   open: [film: Film]
@@ -26,7 +31,27 @@ const emit = defineEmits<{
   'add-favorite': [film: Film]
   'create-favorite': []
   'more-activity': []
+  'set-public': [value: boolean]
+  'set-username': [value: string]
 }>()
+
+function handleToggleVisibility() {
+  emit('set-public', !props.isPublic)
+}
+const showUsernameForm = ref(false)
+function handleShowUsernameForm() {
+  showUsernameForm.value = true
+}
+
+// Accounts created before usernames existed have none: it can be chosen here
+const newUsername = ref('')
+const usernameOk = computed(() => isUsernameValid(newUsername.value))
+function handleUsernameInput(e: Event) {
+  newUsername.value = (e.target as HTMLInputElement).value.normalize('NFC').replace(/\s/g, '')
+}
+function handleSubmitUsername() {
+  if (usernameOk.value) emit('set-username', newUsername.value)
+}
 
 const pickerOpen = ref(false)
 function handleOpenPicker() {
@@ -80,7 +105,31 @@ async function handleCropped(cropped: File) {
 </script>
 
 <template>
-  <section>
+  <section class="relative">
+    <!-- Profile menu (visibility) -->
+    <div class="absolute right-0 top-0 z-10">
+      <KebabMenu>
+        <button
+          v-if="canBePublic"
+          type="button"
+          role="menuitem"
+          class="block w-full cursor-pointer whitespace-nowrap px-4 py-2 text-left text-xs font-bold uppercase tracking-widest text-lb-text hover:bg-white/10 hover:text-white"
+          @click="handleToggleVisibility"
+        >
+          {{ isPublic ? 'Make profile private' : 'Make profile public' }}
+        </button>
+        <button
+          v-else
+          type="button"
+          role="menuitem"
+          class="block w-full cursor-pointer whitespace-nowrap px-4 py-2 text-left text-xs font-bold uppercase tracking-widest text-lb-text hover:bg-white/10 hover:text-white"
+          @click="handleShowUsernameForm"
+        >
+          Choose a username to go public
+        </button>
+      </KebabMenu>
+    </div>
+
     <!-- Avatar + name, centered -->
     <div class="flex flex-col items-center pb-8 pt-2 text-center">
       <label
@@ -110,6 +159,34 @@ async function handleCropped(cropped: File) {
         {{ total }} film{{ total > 1 ? 's' : '' }}
       </p>
       <p v-if="error" class="mt-3 text-sm text-red-400">{{ error }}</p>
+
+      <!-- Current visibility; it is changed from the ⋮ menu -->
+      <p class="mt-3 text-xs uppercase tracking-widest" :class="isPublic ? 'text-lb-green' : 'text-lb-muted'">
+        {{ isPublic ? 'Public profile' : 'Private profile' }}
+      </p>
+
+      <div v-if="showUsernameForm && !canBePublic" class="mt-3 flex w-full flex-col items-center gap-1">
+        <p class="max-w-xs text-xs text-lb-muted">Choose a username to make your profile public.</p>
+
+        <form class="mt-1 w-full max-w-xs" @submit.prevent="handleSubmitUsername">
+          <div class="flex gap-2">
+            <input
+              :value="newUsername"
+              required
+              maxlength="20"
+              autocomplete="username"
+              placeholder="Username"
+              aria-label="Username"
+              class="lb-input"
+              @input="handleUsernameInput"
+            />
+            <button type="submit" class="lb-btn lb-btn-green shrink-0" :disabled="!usernameOk">Save</button>
+          </div>
+          <p class="mt-1 text-left text-xs" :class="newUsername && !usernameOk ? 'text-red-400' : 'text-lb-muted'">
+            {{ USERNAME_HINT }}
+          </p>
+        </form>
+      </div>
     </div>
 
     <!-- Favorites: single row, scrollable sideways -->

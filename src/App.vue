@@ -10,25 +10,25 @@ import type { Tab } from '@/types/ui/Tab'
 import AppHeader from '@/components/AppHeader.vue'
 import BackButton from '@/components/BackButton.vue'
 import AuthView from '@/views/AuthView.vue'
+import ExploreView from '@/views/ExploreView.vue'
 import FilmFormView from '@/views/FilmFormView.vue'
 import FilmView from '@/views/FilmView.vue'
 import ProfileView from '@/views/ProfileView.vue'
+import PublicUserView from '@/views/PublicUserView.vue'
 import SiteView from '@/views/SiteView.vue'
 
 const { session, ready, signOut } = useAuth()
-const { route, lastTab, goTab, goNewFilm, goFilm, goEditFilm } = useRoute()
+const { route, lastTab, goTab, goLogin, goNewFilm, goFilm, goEditFilm } = useRoute()
 
-const tabs: { id: Tab; label: string }[] = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'site', label: 'On Site' },
-]
 const films = ref<Film[]>([])
 const avatarPath = ref<string | null>(null)
 const username = ref<string | null>(null)
 const fullName = ref('')
+const isPublic = ref(false)
 const loading = ref(false)
 const error = ref('')
 
+const signedIn = computed(() => !!session.value)
 const userId = computed(() => session.value?.user.id ?? null)
 const displayName = computed(
   () => username.value ?? session.value?.user.email?.split('@')[0] ?? 'Me',
@@ -42,6 +42,38 @@ const recentFilms = computed(() =>
     .sort((a, b) => b.watched_at.localeCompare(a.watched_at) || b.created_at.localeCompare(a.created_at))
     .slice(0, 5),
 )
+
+// Which page to show. Public pages and Explore work without an account;
+// everything else needs a session and falls back to Explore when signed out.
+const view = computed(() => {
+  const r = route.value
+  if (r.name === 'user' || r.name === 'user-film') return 'public-user' as const
+  if (!signedIn.value) return r.name === 'login' ? ('auth' as const) : ('explore' as const)
+  if (r.name === 'login') return 'profile' as const
+  if (r.name === 'tab') return r.tab
+  return r.name
+})
+
+const tabs = computed<{ id: Tab; label: string }[]>(() =>
+  signedIn.value
+    ? [
+        { id: 'profile', label: 'Profile' },
+        { id: 'site', label: 'On Site' },
+        { id: 'explore', label: 'Explore' },
+      ]
+    : [{ id: 'explore', label: 'Explore' }],
+)
+const currentTab = computed<Tab>(() =>
+  view.value === 'public-user' || view.value === 'explore' ? 'explore' : lastTab.value,
+)
+
+// Target of the public (read-only) routes
+const publicTarget = computed(() => {
+  const r = route.value
+  if (r.name === 'user') return { username: r.username, section: r.section, filmId: undefined }
+  if (r.name === 'user-film') return { username: r.username, section: 'film' as const, filmId: r.id }
+  return null
+})
 
 // Film targeted by the /film/<id> and /film/<id>/edit routes
 const currentFilm = computed(() => {
@@ -58,8 +90,12 @@ watch(
       avatarPath.value = null
       username.value = null
       fullName.value = ''
+      isPublic.value = false
       return
     }
+    // Just signed in from the login page
+    if (route.value.name === 'login') goTab('profile')
+
     loading.value = true
     error.value = ''
     try {
@@ -68,6 +104,7 @@ watch(
       avatarPath.value = loaded?.avatar_path ?? null
       username.value = loaded?.username ?? null
       fullName.value = [loaded?.first_name, loaded?.last_name].filter(Boolean).join(' ')
+      isPublic.value = loaded?.is_public ?? false
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Could not load your data'
     } finally {
@@ -85,6 +122,9 @@ function replaceFilm(film: Film) {
 
 function handleSelectTab(next: Tab) {
   goTab(next)
+}
+function handleSignIn() {
+  goLogin()
 }
 function handleMoreActivity() {
   goTab('site')
@@ -119,6 +159,28 @@ function handleSaved(film: Film) {
 function handleAvatarChanged(path: string) {
   avatarPath.value = path
 }
+async function handleSetUsername(value: string) {
+  error.value = ''
+  try {
+    if (!(await profileHandler.usernameAvailable(value))) {
+      error.value = 'This username is already taken.'
+      return
+    }
+    await profileHandler.setUsername(value)
+    username.value = value
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not save your username'
+  }
+}
+async function handleSetPublic(value: boolean) {
+  error.value = ''
+  try {
+    await profileHandler.setPublic(value)
+    isPublic.value = value
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not update your profile visibility'
+  }
+}
 async function handleToggleFavorite(film: Film) {
   error.value = ''
   try {
@@ -147,43 +209,64 @@ async function handleDelete(film: Film) {
 }
 async function handleSignOut() {
   await signOut()
+  goTab('explore')
 }
 </script>
 
 <template>
   <template v-if="ready">
-    <AuthView v-if="!session" />
+    <AuthView v-if="view === 'auth'" />
     <template v-else>
       <AppHeader
         :tabs="tabs"
-        :current="lastTab"
+        :current="currentTab"
+        :signed-in="signedIn"
         @select="handleSelectTab"
         @add="handleAdd"
+        @sign-in="handleSignIn"
         @sign-out="handleSignOut"
       />
 
       <main class="mx-auto max-w-5xl px-4 pb-28 pt-8 sm:pb-16">
         <p v-if="error" class="mb-4 text-sm text-red-400">{{ error }}</p>
-        <p v-if="loading" class="py-16 text-center text-sm text-lb-muted">Loading…</p>
 
-        <template v-else-if="route.name === 'tab'">
-          <ProfileView
-            v-if="lastTab === 'profile'"
-            :name="displayName"
-            :full-name="fullName"
-            :avatar-path="avatarPath"
-            :favorites="favorites"
-            :candidates="nonFavorites"
-            :recent="recentFilms"
-            :total="films.length"
-            @open="handleOpen"
-            @avatar-changed="handleAvatarChanged"
-            @add-favorite="handleAddFavorite"
-            @create-favorite="handleCreateFavorite"
-            @more-activity="handleMoreActivity"
-          />
-          <SiteView v-else :films="films" @open="handleOpen" @add="handleAdd" />
-        </template>
+        <!-- Public, read-only pages: no account needed -->
+        <PublicUserView
+          v-if="publicTarget"
+          :key="publicTarget.username"
+          :username="publicTarget.username"
+          :section="publicTarget.section"
+          :film-id="publicTarget.filmId"
+        />
+        <ExploreView v-else-if="view === 'explore'" />
+
+        <!-- Everything below needs a session -->
+        <p v-else-if="loading" class="py-16 text-center text-sm text-lb-muted">Loading…</p>
+        <ProfileView
+          v-else-if="view === 'profile'"
+          :name="displayName"
+          :full-name="fullName"
+          :avatar-path="avatarPath"
+          :favorites="favorites"
+          :candidates="nonFavorites"
+          :recent="recentFilms"
+          :total="films.length"
+          :is-public="isPublic"
+          :can-be-public="!!username"
+          @open="handleOpen"
+          @avatar-changed="handleAvatarChanged"
+          @add-favorite="handleAddFavorite"
+          @create-favorite="handleCreateFavorite"
+          @more-activity="handleMoreActivity"
+          @set-public="handleSetPublic"
+          @set-username="handleSetUsername"
+        />
+        <SiteView
+          v-else-if="view === 'site'"
+          :films="films"
+          @open="handleOpen"
+          @add="handleAdd"
+        />
 
         <FilmFormView
           v-else-if="route.name === 'film-new'"

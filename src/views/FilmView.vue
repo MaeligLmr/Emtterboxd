@@ -18,6 +18,8 @@ const props = defineProps<{
   favoritesFull: boolean
   username: string
   avatarPath: string | null
+  /** Public, read-only view: no edit menu, no rewatch / favorite controls */
+  readonly?: boolean
 }>()
 const emit = defineEmits<{
   back: []
@@ -51,8 +53,8 @@ function handleToggleFavorite() {
   <section class="mx-auto max-w-2xl">
     <div class="-mt-2 mb-2 flex items-center gap-1">
       <BackButton @click="emit('back')" />
-      <h2 class="flex-1 text-xl font-bold text-white">Your Review</h2>
-      <KebabMenu>
+      <h2 class="flex-1 text-xl font-bold text-white">{{ readonly ? 'Review' : 'Your Review' }}</h2>
+      <KebabMenu v-if="!readonly">
         <button
           type="button"
           role="menuitem"
@@ -112,7 +114,7 @@ function handleToggleFavorite() {
     </p>
     <p v-else class="py-6 text-base italic text-lb-muted">No comment.</p>
 
-    <div class="flex flex-wrap items-center gap-2 border-t border-lb-line pt-4">
+    <div v-if="!readonly" class="flex flex-wrap items-center gap-2 border-t border-lb-line pt-4">
       <RewatchToggle :rewatched="film.rewatched" @toggle="handleToggleRewatch" />
       <FavoriteButton
         :favorite="film.favorite"

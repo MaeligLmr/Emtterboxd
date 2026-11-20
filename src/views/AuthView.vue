@@ -3,12 +3,14 @@ import { computed, ref } from 'vue'
 import AppLogo from '@/components/AppLogo.vue'
 import PasswordInput from '@/components/PasswordInput.vue'
 import { useAuth } from '@/composables/useAuth'
+import { useRoute } from '@/composables/useRoute'
 import { profileHandler } from '@/handlers/profileHandler'
 import { isUsernameValid, USERNAME_HINT } from '@/lib/validation/username'
 
 const MIN_PASSWORD_LENGTH = 6
 
 const { signIn, signUp } = useAuth()
+const { goTab } = useRoute()
 
 const mode = ref<'login' | 'signup'>('login')
 const firstName = ref('')
@@ -48,6 +50,10 @@ const canSubmit = computed(
 function handleUsernameInput(e: Event) {
   const input = e.target as HTMLInputElement
   username.value = input.value.normalize('NFC').replace(/\s/g, '')
+}
+
+function handleBrowse() {
+  goTab('explore')
 }
 
 function handleToggleMode() {
@@ -184,6 +190,13 @@ async function handleSubmit() {
         @click="handleToggleMode"
       >
         {{ isSignup ? 'Already have an account? Sign in' : 'No account yet? Create one' }}
+      </button>
+      <button
+        type="button"
+        class="w-full cursor-pointer text-center text-xs text-lb-muted hover:text-white"
+        @click="handleBrowse"
+      >
+        Browse public profiles
       </button>
     </form>
   </main>

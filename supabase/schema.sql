@@ -219,3 +219,58 @@ create index if not exists films_user_watched_idx on public.films (user_id, watc
 -- 8. "I rewatched it" toggle: remembers the previous watch date
 -- ---------------------------------------------------------------------
 alter table public.films add column if not exists previous_watched_at date;
+
+
+-- ---------------------------------------------------------------------
+-- 9. Public profiles (read-only, no sign-in needed)
+--    Profiles are private by default; the owner opts in with is_public.
+--    Anonymous visitors never touch the tables: they read two views that
+--    only contain public profiles (no first/last name) and their films.
+-- ---------------------------------------------------------------------
+alter table public.profiles add column if not exists is_public boolean not null default false;
+
+-- Used by the storage policy below (RLS on profiles would hide rows from anonymous users)
+create or replace function public.is_public_user(p_user text) returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles p
+    where p.user_id::text = p_user and p.is_public and p.username is not null
+  );
+$$;
+
+revoke all on function public.is_public_user(text) from public;
+grant execute on function public.is_public_user(text) to anon, authenticated;
+
+-- Views run with their owner's rights, so they bypass RLS on purpose and only expose public rows.
+-- (Supabase's security advisor flags them as SECURITY DEFINER views: that is intended here.)
+drop view if exists public.public_films;
+drop view if exists public.public_profiles;
+
+create view public.public_profiles as
+  select user_id, username, avatar_path
+  from public.profiles
+  where is_public and username is not null;
+
+create view public.public_films as
+  select f.*
+  from public.films f
+  join public.profiles p on p.user_id = f.user_id
+  where p.is_public and p.username is not null;
+
+revoke all on public.public_profiles from anon, authenticated;
+revoke all on public.public_films    from anon, authenticated;
+grant select on public.public_profiles to anon, authenticated;
+grant select on public.public_films    to anon, authenticated;
+
+-- Storage: posters and avatars of public profiles can be read (needed to create signed URLs)
+drop policy if exists "storage: lecture des profils publics" on storage.objects;
+create policy "storage: lecture des profils publics" on storage.objects
+  for select to anon, authenticated
+  using (
+    bucket_id in ('posters', 'avatars')
+    and public.is_public_user((storage.foldername(name))[1])
+  );

@@ -21,6 +21,18 @@ export const filmHandler = {
     return data as Film[]
   },
 
+  /** Films of a public profile (read through the public_films view). */
+  async listPublic(userId: string): Promise<Film[]> {
+    const { data, error } = await supabase
+      .from('public_films')
+      .select('*')
+      .eq('user_id', userId)
+      .order('watched_at', { ascending: false })
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data as Film[]
+  },
+
   async save(input: FilmInput, poster: File | null, existing: Film | null): Promise<Film> {
     const newPath = poster ? await storageHandler.upload(BUCKET, poster) : null
 

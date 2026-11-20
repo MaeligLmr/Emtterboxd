@@ -1,1 +1,1 @@
-export type Tab = 'profile' | 'site'
+export type Tab = 'profile' | 'site' | 'explore'
