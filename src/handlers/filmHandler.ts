@@ -40,11 +40,22 @@ export const filmHandler = {
     return data as Film
   },
 
-  /** "I rewatched it": sets the rewatched flag and moves the viewing date to today. */
-  async markRewatched(film: Film): Promise<Film> {
+  /**
+   * "I rewatched it" toggle.
+   * On: remembers the current watch date and moves it to today.
+   * Off: puts the remembered watch date back.
+   */
+  async setRewatched(film: Film, rewatched: boolean): Promise<Film> {
+    const patch = rewatched
+      ? { rewatched: true, previous_watched_at: film.watched_at, watched_at: todayIso() }
+      : {
+          rewatched: false,
+          watched_at: film.previous_watched_at ?? film.watched_at,
+          previous_watched_at: null,
+        }
     const { data, error } = await supabase
       .from('films')
-      .update({ rewatched: true, watched_at: todayIso() })
+      .update(patch)
       .eq('id', film.id)
       .select()
       .single()

@@ -3,13 +3,11 @@ import type { Route } from '@/types/ui/Route'
 import type { Tab } from '@/types/ui/Tab'
 
 // Routage par hash (fonctionne sur GitHub Pages sans configuration serveur) :
-//   #/profil  #/on-site  #/list  #/watchlist
+//   #/profil  #/on-site
 //   #/film/new  #/film/<id>  #/film/<id>/edit
 const TAB_SLUGS: Record<Tab, string> = {
   profile: 'profil',
   site: 'on-site',
-  list: 'list',
-  watchlist: 'watchlist',
 }
 const DEFAULT_TAB: Tab = 'profile'
 

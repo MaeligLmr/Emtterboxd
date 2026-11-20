@@ -10,6 +10,7 @@ import BackButton from '@/components/BackButton.vue'
 import FavoriteButton from '@/components/FavoriteButton.vue'
 import KebabMenu from '@/components/KebabMenu.vue'
 import RewatchIcon from '@/components/RewatchIcon.vue'
+import RewatchToggle from '@/components/RewatchToggle.vue'
 import StarRating from '@/components/StarRating.vue'
 
 const props = defineProps<{
@@ -22,7 +23,7 @@ const emit = defineEmits<{
   back: []
   edit: [film: Film]
   delete: [film: Film]
-  rewatch: [film: Film]
+  'toggle-rewatch': [film: Film]
   'toggle-favorite': [film: Film]
 }>()
 
@@ -37,8 +38,8 @@ function handleEdit() {
 function handleDelete() {
   emit('delete', props.film)
 }
-function handleRewatch() {
-  emit('rewatch', props.film)
+function handleToggleRewatch() {
+  emit('toggle-rewatch', props.film)
 }
 function handleToggleFavorite() {
   emit('toggle-favorite', props.film)
@@ -112,14 +113,7 @@ function handleToggleFavorite() {
     <p v-else class="py-6 text-base italic text-lb-muted">No comment.</p>
 
     <div class="flex flex-wrap items-center gap-2 border-t border-lb-line pt-4">
-      <button
-        type="button"
-        class="lb-btn lb-btn-grey"
-        title="Marks the film as rewatched and sets the watch date to today"
-        @click="handleRewatch"
-      >
-        <RewatchIcon /> I rewatched it
-      </button>
+      <RewatchToggle :rewatched="film.rewatched" @toggle="handleToggleRewatch" />
       <FavoriteButton
         :favorite="film.favorite"
         :disabled="favDisabled"

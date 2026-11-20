@@ -213,3 +213,9 @@ alter table public.films alter column watched_at set default current_date;
 alter table public.films alter column watched_at set not null;
 
 create index if not exists films_user_watched_idx on public.films (user_id, watched_at desc);
+
+
+-- ---------------------------------------------------------------------
+-- 8. "I rewatched it" toggle: remembers the previous watch date
+-- ---------------------------------------------------------------------
+alter table public.films add column if not exists previous_watched_at date;

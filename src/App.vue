@@ -12,10 +12,8 @@ import BackButton from '@/components/BackButton.vue'
 import AuthView from '@/views/AuthView.vue'
 import FilmFormView from '@/views/FilmFormView.vue'
 import FilmView from '@/views/FilmView.vue'
-import ListView from '@/views/ListView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import SiteView from '@/views/SiteView.vue'
-import WatchlistView from '@/views/WatchlistView.vue'
 
 const { session, ready, signOut } = useAuth()
 const { route, lastTab, goTab, goNewFilm, goFilm, goEditFilm } = useRoute()
@@ -23,8 +21,6 @@ const { route, lastTab, goTab, goNewFilm, goFilm, goEditFilm } = useRoute()
 const tabs: { id: Tab; label: string }[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'site', label: 'On Site' },
-  { id: 'list', label: 'List' },
-  { id: 'watchlist', label: 'Watchlist' },
 ]
 const films = ref<Film[]>([])
 const avatarPath = ref<string | null>(null)
@@ -131,10 +127,10 @@ async function handleToggleFavorite(film: Film) {
     error.value = e instanceof Error ? e.message : 'Could not update favorites'
   }
 }
-async function handleMarkRewatched(film: Film) {
+async function handleToggleRewatched(film: Film) {
   error.value = ''
   try {
-    replaceFilm(await filmHandler.markRewatched(film))
+    replaceFilm(await filmHandler.setRewatched(film, !film.rewatched))
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not update the film'
   }
@@ -186,14 +182,7 @@ async function handleSignOut() {
             @create-favorite="handleCreateFavorite"
             @more-activity="handleMoreActivity"
           />
-          <SiteView
-            v-else-if="lastTab === 'site'"
-            :films="films"
-            @open="handleOpen"
-            @add="handleAdd"
-          />
-          <ListView v-else-if="lastTab === 'list'" />
-          <WatchlistView v-else />
+          <SiteView v-else :films="films" @open="handleOpen" @add="handleAdd" />
         </template>
 
         <FilmFormView
@@ -223,7 +212,7 @@ async function handleSignOut() {
             @back="handleBack"
             @edit="handleEdit"
             @delete="handleDelete"
-            @rewatch="handleMarkRewatched"
+            @toggle-rewatch="handleToggleRewatched"
             @toggle-favorite="handleToggleFavorite"
           />
         </template>
